@@ -76,7 +76,7 @@ func main() {
 		validators[validatorID].Requests <- validator.Duty{Duty: dutyRequest.Duty, Height: dutyRequest.Height}
 	}
 
-	// Couldn't get response during the assignment weather I should implement graceful shutdown or wait group or what. So for simplicity I wait by sleep
-	time.Sleep(time.Second * 5)
+	// Couldn't get response during the assignment weather I should implement graceful shutdown or wait group or what. So for simplicity I wait by sleeping
+	time.Sleep(time.Second * 3)
 	return
 }
