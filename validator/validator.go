@@ -1,5 +1,10 @@
 package validator
 
+import (
+  "fmt"
+  "time"
+)
+
 // describing specific duty for specific validator
 type Duty struct {
 	Duty      string `json:"duty"`
@@ -9,22 +14,25 @@ type Duty struct {
 // define each validator
 type Validator struct {
 	ValidatorID int
-	requests chan Duty
+	Requests chan Duty
 }
 
 // validator which listens to incoming duties and processes
 // the routine is ever running as for simplicity we don't implement ctx listener for
-// interrupt event to shut down the validator listening process
-func (v *Validator) ListenForRequests(wg *sync.WaitGroup) {
+// interrupt event to shut down the validator listening process.
+// The function processes request regardless height as it's unclear if the duties should be
+// processed in order considering height ...
+func (v *Validator) ListenForRequests(/* we could have contect here for graceful shutdown*/) {
+  fmt.Println(v.ValidatorID, " started listening for incoming duties ")
   for {
     // wait for a new request
-    request <- v.requests
+    request := <- v.Requests
 
     // simulating processing period ...
-    time.Sleep(1 * time.Duration)
+    time.Sleep(1 * time.Second)
 
     // log about the successful completion
-    fmt.Println("processed request ", request.Duty, " for height ", request.Height)
+    fmt.Println("Validator ", v.ValidatorID, " processed duty ", request.Duty, " for height ", request.Height)
   }
   return
 }
