@@ -14,7 +14,7 @@ go test ./...
 ```
 
 
-details>
+<details>
 <summary>Expected output</summary>
 <div class="highlight highlight-source-shell"><pre>
 2023/06/18 20:55:41 listening for incoming duties to process
