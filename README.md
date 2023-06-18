@@ -1,6 +1,6 @@
 # run to simulate
 ```bash
-// clone the project
+git clone git@github.com:silagadzeshota/Validator.git
 cd Validator
 export GO111MODULE=on
 export DUTY_WEBSOCKET_URL=ws://127.0.0.1:5000
