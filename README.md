@@ -6,8 +6,9 @@ export GO111MODULE=on
 export DUTY_WEBSOCKET_URL=ws://127.0.0.1:5000
 go mod tidy
 go run main.go
-// start websocket AFTER starting dutyprocessor
 ```
+
+After starting the validator start python script for generating duties
 <details>
 <summary>Expected output</summary>
 <div class="highlight highlight-source-shell"><pre>
