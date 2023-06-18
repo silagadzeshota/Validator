@@ -8,14 +8,6 @@ go mod tidy
 go run main.go
 // start websocket AFTER starting dutyprocessor
 ```
-
-
-## test
-```bash
-go test ./...
-```
-
-
 <details>
 <summary>Expected output</summary>
 <div class="highlight highlight-source-shell"><pre>
@@ -80,3 +72,8 @@ Validator  6  created and started listening for incoming duties
 2023/06/18 20:56:56 Validator  2 : Received new duty  AGGREGATOR  for the height  1
 2023/06/18 20:56:56 Validator  2 : Processed duty  AGGREGATOR  for the height  1</pre></div>
 </details>
+
+## test
+```bash
+go test ./...
+```
