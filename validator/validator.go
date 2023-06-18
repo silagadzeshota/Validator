@@ -217,25 +217,27 @@ func (v *Validator) processDuty(height int, duty string) {
 }
 
 // Checks if duty is received for processing
-func (v *Validator) GetCurrentHeight(duty Duty) {
+func (v *Validator) GetCurrentHeight(duty Duty) int {
   v.DutiesLocker.Lock()
   defer v.DutiesLocker.Unlock()
   return v.CurrentHeight
 }
 
 // Checks if duty is received for processing
-func (v *Validator) GetDutyStatus(duty Duty) {
+func (v *Validator) GetDutyStatus(duty Duty) int {
   v.DutiesLocker.Lock()
   defer v.DutiesLocker.Unlock()
   // Use switch on duty type.
   switch {
-  case duty == Proposer:
+  case duty.Duty == Proposer:
     return v.Duties[duty.Height].Proposer
-  case duty == Attester:
+  case duty.Duty == Attester:
     return v.Duties[duty.Height].Attester
-  case duty == Aggregator:
+  case duty.Duty == Aggregator:
     return v.Duties[duty.Height].Aggregator
-  case duty == SyncCommittee:
+  case duty.Duty == SyncCommittee:
     return v.Duties[duty.Height].SyncCommittee
   }
+
+  return -1
 }
