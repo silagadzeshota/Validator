@@ -2,7 +2,6 @@ package validator
 
 import (
   "log"
-  "fmt"
   "sync"
 )
 
@@ -73,21 +72,20 @@ func (v *Validator) PushNewDuty(duty Duty) {
 
 // Start starts validator which listens to incoming duties and processes them according to height
 func (v *Validator) Start() {
-  fmt.Println("Validator ", v.ValidatorID, " created and started listening for incoming duties ")
+  log.Println("Validator ", v.ValidatorID, " created and started listening for incoming duties ")
 
   for {
+    // wait until we can receive value from one of the channels
     select {
     // receiving new duties
     case duty := <- v.Requests:
       // Process duty request
       v.processDutyRequest(duty)
-
-      // after receiving and registering new duty check if there is any new duty we can process
-      v.checkNextWork()
     case <- v.processingFinished:
-      // after receiving processing finished event we check for the next work if it's available
-      v.checkNextWork()
     }
+
+    // after receiving value from any of the channels we check for the next work if it's available
+    v.checkNextWork()
   }
   return
 }
@@ -217,7 +215,7 @@ func (v *Validator) processDuty(height int, duty string) {
 }
 
 // Checks if duty is received for processing
-func (v *Validator) GetCurrentHeight(duty Duty) int {
+func (v *Validator) GetCurrentHeight() int {
   v.DutiesLocker.Lock()
   defer v.DutiesLocker.Unlock()
   return v.CurrentHeight
