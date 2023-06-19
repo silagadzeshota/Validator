@@ -1,10 +1,10 @@
 package dutyprocessor
 
 import (
-	"log"
-	"errors"
-	"strconv"
 	"encoding/json"
+	"errors"
+	"log"
+	"strconv"
 
 	"dutyprocessor/validator"
 	"dutyprocessor/wslistener"
@@ -36,8 +36,8 @@ func NewDutyProcessor() *DutyProcessor {
 }
 
 /*
-	Start listening to websocket and insert incoming data into channel.
-	Websocket listener part is separated from duty validator as they are functionally and logically independent
+Start listening to websocket and insert incoming data into channel.
+Websocket listener part is separated from duty validator as they are functionally and logically independent
 */
 func (dutyProcessor *DutyProcessor) StartWSListenerForDuties(websocketURL string) {
 	// start listening and pushing incoming data into channel asynchronously
@@ -52,15 +52,15 @@ func (dutyProcessor *DutyProcessor) StartDutyProcessorAsync() {
 // start waitinf for incoming duty requests and distribute them among validators
 func (dutyProcessor *DutyProcessor) StartDutyProcessor() {
 	log.Println("listening for incoming duties to process")
-  for {
-    // wait for a new request
-    duty := <- dutyProcessor.Duties
+	for {
+		// wait for a new request
+		duty := <-dutyProcessor.Duties
 
 		// unmarshal duty
 		var dutyRequest DutyRequest
 		if err := json.Unmarshal([]byte(duty), &dutyRequest); err != nil {
 			log.Println("Cannot unmarshal incoming data as a duty request")
-			continue;
+			continue
 		}
 
 		// process request
@@ -68,8 +68,8 @@ func (dutyProcessor *DutyProcessor) StartDutyProcessor() {
 		if err != nil {
 			log.Println(err.Error())
 		}
-  }
-  return
+	}
+	return
 }
 
 // process pecific request. If corresponding validator doesn't exist create, register and start before submitting duty
@@ -105,7 +105,7 @@ func (dutyProcessor *DutyProcessor) validateDuty(dutyRequest DutyRequest) error 
 
 	// check validator id to be integer
 	if _, err := strconv.Atoi(dutyRequest.Validator); err != nil {
-	    return errors.New("Validator ID not valid")
+		return errors.New("Validator ID not valid")
 	}
 
 	return nil

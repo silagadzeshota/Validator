@@ -1,10 +1,10 @@
 package wslistener
 
 import (
-  "log"
-  "time"
-  // just to note package is no longer maintained but used for simplicity
-  "github.com/gorilla/websocket"
+	"log"
+	"time"
+	// just to note package is no longer maintained but used for simplicity
+	"github.com/gorilla/websocket"
 )
 
 // Delay before attempting reconnection

@@ -1,14 +1,14 @@
 package validator
 
 import (
-  "log"
-  "sync"
+	"log"
+	"sync"
 )
 
 // describing specific duty for specific validator
 type Duty struct {
-	Duty      string
-	Height    int
+	Duty   string
+	Height int
 }
 
 /*
@@ -21,232 +21,232 @@ Value explanation: for specific height duty:
 3 means it's processed
 */
 type DutyStatuses struct {
-  Proposer      int
-  Attester      int
-  Aggregator    int
-  SyncCommittee int
+	Proposer      int
+	Attester      int
+	Aggregator    int
+	SyncCommittee int
 }
 
 // type names
 const (
-  // Duty names
-  Proposer      = "PROPOSER"
-  Attester      = "ATTESTER"
-  Aggregator    = "AGGREGATOR"
-  SyncCommittee = "SYNC_COMMITTEE"
+	// Duty names
+	Proposer      = "PROPOSER"
+	Attester      = "ATTESTER"
+	Aggregator    = "AGGREGATOR"
+	SyncCommittee = "SYNC_COMMITTEE"
 
-  // Duty status meanings
-  DutyNotReceived      = 0
-  DutyReceived         = 1
-  DutyIsBeingProcessed = 2
-  DutyProcessed        = 3
+	// Duty status meanings
+	DutyNotReceived      = 0
+	DutyReceived         = 1
+	DutyIsBeingProcessed = 2
+	DutyProcessed        = 3
 )
 
 // define each validator
 type Validator struct {
-  CurrentHeight      int
-  Duties             map[int]*DutyStatuses
-  DutiesLocker       sync.Mutex
+	CurrentHeight      int
+	Duties             map[int]*DutyStatuses
+	DutiesLocker       sync.Mutex
 	ValidatorID        string
 	Requests           chan Duty
-  processingFinished chan int
+	processingFinished chan int
 }
 
 // creates and returns pointer to new validator
 func NewValidator(validatorID string) *Validator {
-  // create and register validator
+	// create and register validator
 	validator := &Validator{
 		CurrentHeight:      0,
 		ValidatorID:        validatorID,
 		Requests:           make(chan Duty),
 		Duties:             make(map[int]*DutyStatuses),
-    processingFinished: make(chan int),
+		processingFinished: make(chan int),
 	}
 
-  return validator
+	return validator
 }
 
 // ProcessDuty receives duty and pushes into the channel for processing
 func (v *Validator) PushNewDuty(duty Duty) {
-  v.Requests <- duty
+	v.Requests <- duty
 }
 
 // Start starts validator which listens to incoming duties and processes them according to height
 func (v *Validator) Start() {
-  log.Println("Validator ", v.ValidatorID, " created and started listening for incoming duties ")
+	log.Println("Validator ", v.ValidatorID, " created and started listening for incoming duties ")
 
-  for {
-    // wait until we can receive value from one of the channels
-    select {
-    // receiving new duties
-    case duty := <- v.Requests:
-      // Process duty request just registers request for specific validator to process
-      v.registerDutyRequest(duty)
-    // received event that processing one of the duties for current height finished
-    case <- v.processingFinished:
-      // check if we need to increase current height
-      v.increaseHeight()
-    }
+	for {
+		// wait until we can receive value from one of the channels
+		select {
+		// receiving new duties
+		case duty := <-v.Requests:
+			// Process duty request just registers request for specific validator to process
+			v.registerDutyRequest(duty)
+		// received event that processing one of the duties for current height finished
+		case <-v.processingFinished:
+			// check if we need to increase current height
+			v.increaseHeight()
+		}
 
-    // after receiving value from any of the channels we check for the next work if it's available
-    v.checkNextWork()
-  }
-  return
+		// after receiving value from any of the channels we check for the next work if it's available
+		v.checkNextWork()
+	}
+	return
 }
 
 // after finishing the duty processing we check if we have processed all the duties for the current height if so increase it
 func (v *Validator) increaseHeight() {
-  // for updating duty status protect map
-  v.DutiesLocker.Lock()
-  defer v.DutiesLocker.Unlock()
+	// for updating duty status protect map
+	v.DutiesLocker.Lock()
+	defer v.DutiesLocker.Unlock()
 
-  // if we are the last duty that was processed in the current height increase current height
-  if v.Duties[v.CurrentHeight].Proposer == DutyProcessed && v.Duties[v.CurrentHeight].Attester == DutyProcessed && v.Duties[v.CurrentHeight].Aggregator == DutyProcessed && v.Duties[v.CurrentHeight].SyncCommittee == DutyProcessed {
-    log.Println("Validator ", v.ValidatorID, " moved to processing height ", v.CurrentHeight + 1)
-    v.CurrentHeight++
-  }
+	// if we are the last duty that was processed in the current height increase current height
+	if v.Duties[v.CurrentHeight].Proposer == DutyProcessed && v.Duties[v.CurrentHeight].Attester == DutyProcessed && v.Duties[v.CurrentHeight].Aggregator == DutyProcessed && v.Duties[v.CurrentHeight].SyncCommittee == DutyProcessed {
+		log.Println("Validator ", v.ValidatorID, " moved to processing height ", v.CurrentHeight+1)
+		v.CurrentHeight++
+	}
 }
 
 // Process duty request
 func (v *Validator) registerDutyRequest(duty Duty) {
-  // lock map for safety
-  v.DutiesLocker.Lock()
-  defer v.DutiesLocker.Unlock()
+	// lock map for safety
+	v.DutiesLocker.Lock()
+	defer v.DutiesLocker.Unlock()
 
-  // check if height in the duty is activated (if we have anything received for specific height)
-  if _, ok := v.Duties[duty.Height]; ok == false {
-    v.Duties[duty.Height] = &DutyStatuses{}
-  }
+	// check if height in the duty is activated (if we have anything received for specific height)
+	if _, ok := v.Duties[duty.Height]; ok == false {
+		v.Duties[duty.Height] = &DutyStatuses{}
+	}
 
-  // Use switch on duty type.
-  switch {
-  case duty.Duty == Proposer:
-    if v.Duties[duty.Height].Proposer >= DutyReceived {
-      log.Println("Validator ", v.ValidatorID, ": Duty ", Proposer, " already received")
-      return
-    } else {
-      v.Duties[duty.Height].Proposer = 1
-    }
-  case duty.Duty == Aggregator:
-    if v.Duties[duty.Height].Aggregator >= DutyReceived {
-      log.Println("Validator ", v.ValidatorID, ": Duty ", Aggregator, " already received")
-      return
-    } else {
-      v.Duties[duty.Height].Aggregator = 1
-    }
-  case duty.Duty == SyncCommittee:
-    if v.Duties[duty.Height].SyncCommittee >= DutyReceived {
-      log.Println("Validator ", v.ValidatorID, ": Duty ", SyncCommittee, " already received")
-      return
-    } else {
-      v.Duties[duty.Height].SyncCommittee = 1
-    }
-  case duty.Duty == Attester:
-    if v.Duties[duty.Height].Attester >= DutyReceived {
-      log.Println("Validator ", v.ValidatorID, ": Duty ", Attester, " already received")
-      return
-    } else {
-      v.Duties[duty.Height].Attester = 1
-    }
-  }
+	// Use switch on duty type.
+	switch {
+	case duty.Duty == Proposer:
+		if v.Duties[duty.Height].Proposer >= DutyReceived {
+			log.Println("Validator ", v.ValidatorID, ": Duty ", Proposer, " already received")
+			return
+		} else {
+			v.Duties[duty.Height].Proposer = 1
+		}
+	case duty.Duty == Aggregator:
+		if v.Duties[duty.Height].Aggregator >= DutyReceived {
+			log.Println("Validator ", v.ValidatorID, ": Duty ", Aggregator, " already received")
+			return
+		} else {
+			v.Duties[duty.Height].Aggregator = 1
+		}
+	case duty.Duty == SyncCommittee:
+		if v.Duties[duty.Height].SyncCommittee >= DutyReceived {
+			log.Println("Validator ", v.ValidatorID, ": Duty ", SyncCommittee, " already received")
+			return
+		} else {
+			v.Duties[duty.Height].SyncCommittee = 1
+		}
+	case duty.Duty == Attester:
+		if v.Duties[duty.Height].Attester >= DutyReceived {
+			log.Println("Validator ", v.ValidatorID, ": Duty ", Attester, " already received")
+			return
+		} else {
+			v.Duties[duty.Height].Attester = 1
+		}
+	}
 
-  // log receiving new duty
-  log.Println("Validator ", v.ValidatorID, ": Received new duty ", duty.Duty, " for the height ", duty.Height)
-  return
+	// log receiving new duty
+	log.Println("Validator ", v.ValidatorID, ": Received new duty ", duty.Duty, " for the height ", duty.Height)
+	return
 }
 
 // for the current height check if there is a received duty we can process
 func (v *Validator) checkNextWork() {
-  // protect map
-  v.DutiesLocker.Lock()
-  defer v.DutiesLocker.Unlock()
+	// protect map
+	v.DutiesLocker.Lock()
+	defer v.DutiesLocker.Unlock()
 
-  // check if height in the duty is activated (if we have anything received for specific height)
-  if _, ok := v.Duties[v.CurrentHeight]; ok == false {
-    v.Duties[v.CurrentHeight] = &DutyStatuses{}
-  }
+	// check if height in the duty is activated (if we have anything received for specific height)
+	if _, ok := v.Duties[v.CurrentHeight]; ok == false {
+		v.Duties[v.CurrentHeight] = &DutyStatuses{}
+	}
 
-  // check if we have duty that we received and isn't
-  if v.Duties[v.CurrentHeight].Proposer == DutyReceived {
-    // mark duty as being processed and start processing it
-    v.Duties[v.CurrentHeight].Proposer = DutyIsBeingProcessed
-    go v.processDuty(v.CurrentHeight, Proposer)
-  }
+	// check if we have duty that we received and isn't
+	if v.Duties[v.CurrentHeight].Proposer == DutyReceived {
+		// mark duty as being processed and start processing it
+		v.Duties[v.CurrentHeight].Proposer = DutyIsBeingProcessed
+		go v.processDuty(v.CurrentHeight, Proposer)
+	}
 
-  // check if we have duty that we received and isn't
-  if v.Duties[v.CurrentHeight].Attester == DutyReceived {
-    // mark duty as being processed and start processing it
-    v.Duties[v.CurrentHeight].Attester = DutyIsBeingProcessed
-    go v.processDuty(v.CurrentHeight, Attester)
-  }
+	// check if we have duty that we received and isn't
+	if v.Duties[v.CurrentHeight].Attester == DutyReceived {
+		// mark duty as being processed and start processing it
+		v.Duties[v.CurrentHeight].Attester = DutyIsBeingProcessed
+		go v.processDuty(v.CurrentHeight, Attester)
+	}
 
-  // check if we have duty that we received and isn't
-  if v.Duties[v.CurrentHeight].Aggregator == DutyReceived {
-    // mark duty as being processed and start processing it
-    v.Duties[v.CurrentHeight].Aggregator = DutyIsBeingProcessed
-    go v.processDuty(v.CurrentHeight, Aggregator)
-  }
+	// check if we have duty that we received and isn't
+	if v.Duties[v.CurrentHeight].Aggregator == DutyReceived {
+		// mark duty as being processed and start processing it
+		v.Duties[v.CurrentHeight].Aggregator = DutyIsBeingProcessed
+		go v.processDuty(v.CurrentHeight, Aggregator)
+	}
 
-  // check if we have duty that we received and isn't
-  if v.Duties[v.CurrentHeight].SyncCommittee == DutyReceived {
-    // mark duty as being processed and start processing it
-    v.Duties[v.CurrentHeight].SyncCommittee = DutyIsBeingProcessed
-    go v.processDuty(v.CurrentHeight, SyncCommittee)
-  }
+	// check if we have duty that we received and isn't
+	if v.Duties[v.CurrentHeight].SyncCommittee == DutyReceived {
+		// mark duty as being processed and start processing it
+		v.Duties[v.CurrentHeight].SyncCommittee = DutyIsBeingProcessed
+		go v.processDuty(v.CurrentHeight, SyncCommittee)
+	}
 
-  return
+	return
 }
 
 func (v *Validator) processDuty(height int, duty string) {
-  // for updating duty status protect map
-  v.DutiesLocker.Lock()
+	// for updating duty status protect map
+	v.DutiesLocker.Lock()
 
-  // Use switch on duty type.
-  switch {
-  case duty == Proposer:
-    v.Duties[height].Proposer = DutyProcessed
-  case duty == Attester:
-    v.Duties[height].Attester = DutyProcessed
-  case duty == Aggregator:
-    v.Duties[height].Aggregator = DutyProcessed
-  case duty == SyncCommittee:
-    v.Duties[height].SyncCommittee = DutyProcessed
-  }
+	// Use switch on duty type.
+	switch {
+	case duty == Proposer:
+		v.Duties[height].Proposer = DutyProcessed
+	case duty == Attester:
+		v.Duties[height].Attester = DutyProcessed
+	case duty == Aggregator:
+		v.Duties[height].Aggregator = DutyProcessed
+	case duty == SyncCommittee:
+		v.Duties[height].SyncCommittee = DutyProcessed
+	}
 
-  // unlock map
-  v.DutiesLocker.Unlock()
+	// unlock map
+	v.DutiesLocker.Unlock()
 
-  // pretend we processed duty
-  log.Println("Validator ", v.ValidatorID, ": Processed duty ", duty, " for the height ", height)
+	// pretend we processed duty
+	log.Println("Validator ", v.ValidatorID, ": Processed duty ", duty, " for the height ", height)
 
-  // notify main thread to check for the next duty
-  v.processingFinished <- 1
+	// notify main thread to check for the next duty
+	v.processingFinished <- 1
 
-  return
+	return
 }
 
 // Checks if duty is received for processing
 func (v *Validator) GetCurrentHeight() int {
-  v.DutiesLocker.Lock()
-  defer v.DutiesLocker.Unlock()
-  return v.CurrentHeight
+	v.DutiesLocker.Lock()
+	defer v.DutiesLocker.Unlock()
+	return v.CurrentHeight
 }
 
 // Checks if duty is received for processing
 func (v *Validator) GetDutyStatus(duty Duty) int {
-  v.DutiesLocker.Lock()
-  defer v.DutiesLocker.Unlock()
-  // Use switch on duty type.
-  switch {
-  case duty.Duty == Proposer:
-    return v.Duties[duty.Height].Proposer
-  case duty.Duty == Attester:
-    return v.Duties[duty.Height].Attester
-  case duty.Duty == Aggregator:
-    return v.Duties[duty.Height].Aggregator
-  case duty.Duty == SyncCommittee:
-    return v.Duties[duty.Height].SyncCommittee
-  }
+	v.DutiesLocker.Lock()
+	defer v.DutiesLocker.Unlock()
+	// Use switch on duty type.
+	switch {
+	case duty.Duty == Proposer:
+		return v.Duties[duty.Height].Proposer
+	case duty.Duty == Attester:
+		return v.Duties[duty.Height].Attester
+	case duty.Duty == Aggregator:
+		return v.Duties[duty.Height].Aggregator
+	case duty.Duty == SyncCommittee:
+		return v.Duties[duty.Height].SyncCommittee
+	}
 
-  return -1
+	return -1
 }
