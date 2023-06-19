@@ -81,9 +81,11 @@ func (v *Validator) Start() {
     // receiving new duties
     case duty := <- v.Requests:
       // Process duty request just registers request for specific validator to process
-      v.processDutyRequest(duty)
+      v.registerDutyRequest(duty)
+    // received event that processing one of the duties for current height finished
     case <- v.processingFinished:
-      // meaning one of the duty processing finished
+      // check if we need to increase current height
+      v.increaseHeight()
     }
 
     // after receiving value from any of the channels we check for the next work if it's available
@@ -92,8 +94,21 @@ func (v *Validator) Start() {
   return
 }
 
+// after finishing the duty processing we check if we have processed all the duties for the current height if so increase it
+func (v *Validator) increaseHeight() {
+  // for updating duty status protect map
+  v.DutiesLocker.Lock()
+  defer v.DutiesLocker.Unlock()
+
+  // if we are the last duty that was processed in the current height increase current height
+  if v.Duties[v.CurrentHeight].Proposer == DutyProcessed && v.Duties[v.CurrentHeight].Attester == DutyProcessed && v.Duties[v.CurrentHeight].Aggregator == DutyProcessed && v.Duties[v.CurrentHeight].SyncCommittee == DutyProcessed {
+    log.Println("Validator ", v.ValidatorID, " moved to processing height ", v.CurrentHeight + 1)
+    v.CurrentHeight++
+  }
+}
+
 // Process duty request
-func (v *Validator) processDutyRequest(duty Duty) {
+func (v *Validator) registerDutyRequest(duty Duty) {
   // lock map for safety
   v.DutiesLocker.Lock()
   defer v.DutiesLocker.Unlock()
@@ -183,9 +198,6 @@ func (v *Validator) checkNextWork() {
 }
 
 func (v *Validator) processDuty(height int, duty string) {
-  // pretend we processed duty
-  log.Println("Validator ", v.ValidatorID, ": Processed duty ", duty, " for the height ", height)
-
   // for updating duty status protect map
   v.DutiesLocker.Lock()
 
@@ -201,14 +213,11 @@ func (v *Validator) processDuty(height int, duty string) {
     v.Duties[height].SyncCommittee = DutyProcessed
   }
 
-  // if we are the last duty that was processed in the current height increase current height
-  if v.Duties[height].Proposer == DutyProcessed && v.Duties[height].Attester == DutyProcessed && v.Duties[height].Aggregator == DutyProcessed && v.Duties[height].SyncCommittee == DutyProcessed {
-    log.Println("Validator ", v.ValidatorID, " moved to processing height ", v.CurrentHeight + 1)
-    v.CurrentHeight++
-  }
-
   // unlock map
   v.DutiesLocker.Unlock()
+
+  // pretend we processed duty
+  log.Println("Validator ", v.ValidatorID, ": Processed duty ", duty, " for the height ", height)
 
   // notify main thread to check for the next duty
   v.processingFinished <- 1

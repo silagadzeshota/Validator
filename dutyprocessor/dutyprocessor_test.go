@@ -394,3 +394,43 @@ func TestMultipleValidatorsDontChangeHeight(t *testing.T){
         t.Errorf("Validator didn't increase height")
     }
 }
+
+func TestValidatorProcessesHigherDuties(t *testing.T){
+    // as we have goroutines we need to use sleep for simplicity so not to wait the sum of all sleeps we run tests in parallel :)
+    t.Parallel()
+
+    // create main processor
+    processor := NewDutyProcessor()
+
+    // create validator with id 21
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Proposer, Height: 2})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Attester, Height: 2})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Aggregator, Height: 2})
+
+    // create validator with id 21
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Proposer, Height: 1})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Attester, Height: 1})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Aggregator, Height: 1})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.SyncCommittee, Height: 1})
+
+    // create validator with id 21
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Proposer, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Attester, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Aggregator, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.SyncCommittee, Height: 0})
+
+    // should not exist
+    time.Sleep(300 * time.Millisecond)
+
+    if processor.GetValidator("2").GetCurrentHeight() != 2 {
+        t.Errorf("Validator didn't increase height")
+    }
+
+    if processor.GetValidator("2").GetDutyStatus(validator.Duty{Duty: validator.Proposer, Height: 2}) != validator.DutyProcessed {
+      t.Errorf("Validator didn't process ready duties")
+    }
+
+    if processor.GetValidator("2").GetDutyStatus(validator.Duty{Duty: validator.SyncCommittee, Height: 2}) != validator.DutyNotReceived {
+      t.Errorf("Validator process duty not received")
+    }
+}
