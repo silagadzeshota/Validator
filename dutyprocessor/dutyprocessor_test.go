@@ -343,3 +343,54 @@ func TestMultipleValidatorsNotIncreasingHeight(t *testing.T){
         t.Errorf("Validator didn't increase height")
     }
 }
+
+func TestMultipleValidatorsDontChangeHeight(t *testing.T){
+    // as we have goroutines we need to use sleep for simplicity so not to wait the sum of all sleeps we run tests in parallel :)
+    t.Parallel()
+
+    // create main processor
+    processor := NewDutyProcessor()
+
+    // create validator with id 21
+    processor.ProcessRequest(DutyRequest{Validator: "1", Duty: validator.Proposer, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "1", Duty: validator.Attester, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "1", Duty: validator.Aggregator, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "1", Duty: validator.SyncCommittee, Height: 221})
+
+    // create validator with id 21
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Proposer, Height: 2})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Attester, Height: 2})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Aggregator, Height: 2})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.SyncCommittee, Height: 2})
+
+    // create validator with id 21
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Proposer, Height: 1})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Attester, Height: 1})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Aggregator, Height: 1})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.SyncCommittee, Height: 1})
+
+    // create validator with id 21
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Proposer, Height: 6})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Attester, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.Aggregator, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "2", Duty: validator.SyncCommittee, Height: 0})
+
+    // create validator with id 21
+    processor.ProcessRequest(DutyRequest{Validator: "3", Duty: validator.Proposer, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "3", Duty: validator.Attester, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "3", Duty: validator.Aggregator, Height: 0})
+    processor.ProcessRequest(DutyRequest{Validator: "3", Duty: validator.SyncCommittee, Height: 1})
+
+    // should not exist
+    time.Sleep(300 * time.Millisecond)
+
+    if processor.GetValidator("1").GetCurrentHeight() != 0 {
+        t.Errorf("Validator didn't increase height")
+    }
+    if processor.GetValidator("2").GetCurrentHeight() != 0 {
+        t.Errorf("Validator didn't increase height")
+    }
+    if processor.GetValidator("3").GetCurrentHeight() != 0 {
+        t.Errorf("Validator didn't increase height")
+    }
+}

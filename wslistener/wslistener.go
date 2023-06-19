@@ -11,7 +11,8 @@ import (
 const reconnectDelay = 5 * time.Second
 
 // reads incoming data from websocket as a byte array and pushes into the output channel
-// the implementation doesn't know about the "duties", separating websocket functionality from the logic
+// the implementation doesn't know about the "duties", separating websocket functionality from the logic.
+// Also not implementing wss secure connection functionality for simplicity
 func PullData(endpoint string, output chan []byte) {
 	// Keep retrying the WebSocket connection
 	for {

@@ -22,5 +22,6 @@ func main() {
 	// starts listening to incoming duties from duty channel and distributing them among validators to process
 	processor.StartDutyProcessor()
 
+	// not implementing graceful shutdown for simplicity
 	return
 }

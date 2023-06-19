@@ -14,10 +14,11 @@ type Duty struct {
 /*
 status for each duty. As stated in the assignment we have only these types of duties and they never change,
 that's the reason of hardcoding them. Otherwise those kind of types can be separated as a list.
-Type explanation: for specific height duty:
+Value explanation: for specific height duty:
 0 means it's not received
 1 means it's received but not processed
-2 means it's received and processed by the validator
+2 means it's received and being processed
+3 means it's processed
 */
 type DutyStatuses struct {
   Proposer      int
@@ -79,9 +80,10 @@ func (v *Validator) Start() {
     select {
     // receiving new duties
     case duty := <- v.Requests:
-      // Process duty request
+      // Process duty request just registers request for specific validator to process
       v.processDutyRequest(duty)
     case <- v.processingFinished:
+      // meaning one of the duty processing finished
     }
 
     // after receiving value from any of the channels we check for the next work if it's available
