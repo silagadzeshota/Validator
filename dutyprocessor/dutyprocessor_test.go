@@ -18,7 +18,7 @@ func TestValidatorExists(t *testing.T) {
 		t.Errorf("validator with id 1 should not exist")
 	}
 
-	// should not exist
+	// should exist
 	if processor.ValidatorExists("21") == false {
 		t.Errorf("validator with id 21 should  exist")
 	}
@@ -46,7 +46,7 @@ func TestIncorrectHeight(t *testing.T) {
 
 	// should not exist
 	if processor.ValidatorExists("1") == true {
-		t.Errorf("validator with id 1 should exist")
+		t.Errorf("validator with id 1 should not exist")
 	}
 }
 
@@ -59,7 +59,7 @@ func TestIncorrectDuty(t *testing.T) {
 
 	// should not exist
 	if processor.ValidatorExists("1") == true {
-		t.Errorf("validator with id 1 should exist")
+		t.Errorf("validator with id 1 should not exist")
 	}
 }
 
